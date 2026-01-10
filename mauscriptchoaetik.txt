@@ -1,104 +1,236 @@
--- ✅ MẪU CHUẨN CHO NGƯỜI MỚI | TÉO HUB 🍎
--- Giữ nguyên giao diện thật, chỉ thêm hướng dẫn 👈 ngay bên cạnh dòng cần sửa
-
-repeat task.wait() until game:IsLoaded()
-
--- 🟢 Nút mở menu chính
-local ScreenGui = Instance.new("ScreenGui")
-local ImageButton = Instance.new("ImageButton")
-local UICorner = Instance.new("UICorner")
-
-ScreenGui.Parent = game.CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-ImageButton.Parent = ScreenGui
-ImageButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ImageButton.BorderSizePixel = 0
-ImageButton.Position = UDim2.new(0.10615778, 0, 0.16217947, 0)
-ImageButton.Size = UDim2.new(0, 40, 0, 40)
-ImageButton.Draggable = true
-ImageButton.Image = "http://www.roblox.com/asset/?id=15059956542"  -- 👈 đổi ID ảnh nút mở menu tại đây (ảnh roblox)
-
-UICorner.CornerRadius = UDim.new(1, 10)
-UICorner.Parent = ImageButton
-
-ImageButton.MouseButton1Down:Connect(function()
-	game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.End, false, game)
+local TS = game:GetService("TeleportService")
+local HS = game:GetService("HttpService")
+local PLRS = game:GetService("Players")
+local SG = game:GetService("StarterGui")
+local Lighting = game:GetService("Lighting")
+local CollectionService = game:GetService("CollectionService")
+local WS = game:GetService("Workspace")
+local RS = game:GetService("ReplicatedStorage")
+local PID = game.PlaceId
+local LP = PLRS.LocalPlayer
+local SEA_PIDS = {2753915549, 4442272183, 7449423635}
+local SEA_NAMES = {"First Sea", "Second Sea", "Third Sea"}
+local CURRENT_SEA = 1
+for i=1,3 do if SEA_PIDS[i] == PID then CURRENT_SEA = i break end end
+local function notify(title, txt, dur)
+    pcall(function()
+        SG:SetCore("SendNotification", {
+            Title = title,
+            Text = txt,
+            Duration = dur or 5,
+            Icon = "rbxassetid://76020773425692"
+        })
+    end)
+end
+local function getLowPopServers(maxPlaying)
+    maxPlaying = maxPlaying or 5
+    local servers, cursor = {}, ""
+    repeat
+        local url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s", PID, cursor ~= "" and "&cursor="..cursor or "")
+        local success, res = pcall(HS.JSONDecode, HS, game:HttpGet(url))
+        if not success or not res or not res.data then break end
+        for _, srv in res.data do
+            if srv.playing <= maxPlaying and srv.playing < srv.maxPlayers then
+                table.insert(servers, srv)
+            end
+        end
+        cursor = res.nextPageCursor or ""
+    until cursor == ""
+    table.sort(servers, function(a,b) return a.playing < b.playing end)
+    return servers
+end
+local function hopLowPop(maxPlaying)
+    local servers = getLowPopServers(maxPlaying)
+    if #servers == 0 then
+        notify("Hop", "No low pop servers! Random hop...", 3)
+        TS:Teleport(PID)
+        return true
+    end
+    for _, srv in servers do
+        if srv.id ~= game.JobId then
+            notify("Hop", string.format("Hop %d/%d...", srv.playing, srv.maxPlayers), 2)
+            TS:TeleportToPlaceInstance(PID, srv.id, LP)
+            return true
+        end
+    end
+    notify("Hop", "All low pop taken! Random...", 3)
+    TS:Teleport(PID)
+    return true
+end
+local function waitLoadAndCheck(checkFunc, checkName)
+    task.wait(8)
+    local success, has = pcall(checkFunc)
+    if success and has then
+        notify("FOUND ✅", checkName .. " TÌM THẤY! Dừng hop.", 10)
+        return true
+    end
+    return false
+end
+local function hasFullMoon() return Lighting.ClockTime == 0 end
+local function hasMirage() 
+    local wo = WS:FindFirstChild("_WorldOrigin")
+    return wo and wo:FindFirstChild("Locations") and wo.Locations:FindFirstChild("Mirage Island")
+end
+local function hasCakePrince() 
+    return WS.Enemies:FindFirstChild("Cake Prince") or RS:FindFirstChild("Cake Prince")
+end
+local function hasDoughKing() 
+    return WS.Enemies:FindFirstChild("Dough King") or RS:FindFirstChild("Dough King")
+end
+local function hasLegendaryBerry()
+    for _, berry in CollectionService:GetTagged("Berry") do
+        local rarity = berry:FindFirstChild("Rarity")
+        if rarity and rarity:IsA("StringValue") and rarity.Value == "Legendary" then
+            return true
+        end
+    end
+    return false
+end
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("🚀 Hop Hub Blox Fruits - 2026", "Ocean")
+local HopTab = Window:NewTab("Hops")
+local LowSec = HopTab:NewSection("Low Pop & General")
+local EventSec = HopTab:NewSection("Events (All Sea)")
+local Sea3Sec = HopTab:NewSection("Sea 3 Only")
+LowSec:NewLabel("Current Sea: " .. SEA_NAMES[CURRENT_SEA])
+LowSec:NewSlider("MaxPlayersHop", "Max players to hop (<=)", 500, 1, function(v) MAX_PLAYERS = v end):Set(5)
+local MAX_HOPS_SLIDER = 100
+local MAX_PLAYERS = 5
+local HOP_DELAY = 2
+local hopping = {lowpop=false, fullmoon=false, mirage=false, cake=false, dough=false, berry=false}
+LowSec:NewToggle("LowPopToggle", "Hop Low Pop (<= " .. MAX_PLAYERS .. ")", function(state)
+    hopping.lowpop = state
+    if state then
+        notify("Low Pop", "Bắt đầu hop low pop...", 4)
+        task.spawn(function()
+            local count = 0
+            while hopping.lowpop and count < MAX_HOPS_SLIDER do
+                count += 1
+                if hopLowPop(MAX_PLAYERS) then
+                    task.wait(HOP_DELAY)
+                else
+                    break
+                end
+            end
+            hopping.lowpop = false
+            notify("Low Pop", "Dừng (max hops)", 4)
+        end)
+    end
 end)
-
--- 🟣 Giao diện Fluent
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-repeat wait() until game:IsLoaded()
-
--- 🪟 Cửa sổ chính
-local Window = Fluent:CreateWindow({
-	Title = "Téo 🍎v2 update =}",         -- 👈 đổi thành tên script của bạn
-	SubTitle = "vip pro💎😍",              -- 👈 đổi mô tả phụ
-	TabWidth = 157,
-	Size = UDim2.fromOffset(450, 300),
-	Acrylic = true,
-	Theme = "Amethyst",                   -- 👈 đổi màu chủ đạo: Amethyst, Dark, Aqua, Light,...
-	MinimizeKey = Enum.KeyCode.End
-})
-
--- 📑 Các tab (mục chính)
-local Tabs = {
-	Main0 = Window:AddTab({ Title = "một số kênh🤓" }),  -- 👈 đổi tên tab 1
-	Main1 = Window:AddTab({ Title = "grow a gaden 🌱🌴🌵🌲" }),  -- 👈 đổi tên tab 2
-	Main2 = Window:AddTab({ Title = "bran rót💩" }),     -- 👈 đổi tên tab 3
-	Main3 = Window:AddTab({ Title = "99 đêm🥷" }),        -- 👈 đổi tên tab 4
-	Main4 = Window:AddTab({ Title = "blox fruit🍎" }),    -- 👈 đổi tên tab 5
-	Main5 = Window:AddTab({ Title = "plan vs branro🌲🐘t" }) -- 👈 đổi tên tab 6
-}
-
-------------------------------------------------
--- TAB 1: Các kênh tiktok
-------------------------------------------------
-Tabs.Main0:AddButton({
-	Title = "tiktok bạn:)",              -- 👈 tên nút
-	Description = "oách xà lách vô cùng",-- 👈 mô tả nút
-	Callback = function()
-		setclipboard("https://www.tiktok.com/@jannie3342?_t=ZS-90QsJQ5j0NO&_r=1")  -- 👈 link sao chép
-	end
-})
-
-Tabs.Main0:AddButton({
-	Title = "tik",
-	Description = "làm chơi thui",
-	Callback = function()
-		setclipboard("https://www.tiktok.com/@b.yt03?_t=ZS-90QsHokNlwN&_r=1")     -- 👈 link khác
-	end
-})
-
-Tabs.Main0:AddButton({
-	Title = "tiktok",
-	Description = "fl tiktok để biết thêm nhiều script",
-	Callback = function()
-		setclipboard("https://www.tiktok.com/@b.yt03?_t=ZS-90QsHmSjaiu&_r=1")
-	end
-})
-
-------------------------------------------------
--- TAB 2: Ví dụ thêm script
-------------------------------------------------
-Tabs.Main1:AddButton({
-	Title = "quantum",                             -- 👈 tên nút hiển thị
-	Description = "script này ngon á đủ chức năng cả😃",-- 👈 mô tả
-	Callback = function()
-		local Settings = {
-			JoinTeam = "Pirates";   -- 👈 team mặc định: Pirates hoặc Marines
-			Translator = true;      -- 👈 bật dịch sang tiếng Việt nếu có
-		}
-		{(loadstring(game:HttpGet("https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/QuantumOnyx.lua"))() -- 👈 link script tải
-	end
-})
-Tabs.Main1:AddButton({
-	Title = "x10 luck",                             -- 👈 tên nút hiển thị
-	Description = "script này ngon á đủ chức năng cả😃",-- 👈 mô tả
-	Callback = function()
-		local Settings = {
-			JoinTeam = "Pirates";   -- 👈 team mặc định: Pirates hoặc Marines
-			Translator = true;      -- 👈 bật dịch sang tiếng Việt nếu có
-		}{(@thuyduong💫:loadstring(game:HttpGet("https://raw.githubusercontent.com/hnc-roblox/HNC_Hub/refs/heads/main/x10Luck.lua"))()
-		end
-})
+EventSec:NewToggle("FullMoonToggle", "Hop Full Moon", function(state)
+    hopping.fullmoon = state
+    if state then
+        notify("Full Moon", "Tìm Full Moon...", 4)
+        task.spawn(function()
+            local count = 0
+            while hopping.fullmoon and count < MAX_HOPS_SLIDER do
+                count += 1
+                if hopLowPop() then
+                    if waitLoadAndCheck(hasFullMoon, "Full Moon") then
+                        hopping.fullmoon = false
+                        break
+                    end
+                end
+                task.wait(HOP_DELAY)
+            end
+            hopping.fullmoon = false
+            notify("Full Moon", "Dừng", 4)
+        end)
+    end
+end)
+if CURRENT_SEA == 3 then
+    EventSec:NewToggle("MirageToggle", "Hop Đảo Bí Ẩn (Mirage)", function(state)
+        hopping.mirage = state
+        if state then
+            notify("Mirage", "Tìm Mirage Island...", 4)
+            task.spawn(function()
+                local count = 0
+                while hopping.mirage and count < MAX_HOPS_SLIDER do
+                    count += 1
+                    if hopLowPop() then
+                        if waitLoadAndCheck(hasMirage, "Mirage Island") then
+                            hopping.mirage = false
+                            break
+                        end
+                    end
+                    task.wait(HOP_DELAY)
+                end
+                hopping.mirage = false
+                notify("Mirage", "Dừng", 4)
+            end)
+        end
+    end)
+    Sea3Sec:NewToggle("CakePrinceToggle", "Hop Katakuri V1 (Cake Prince)", function(state)
+        hopping.cake = state
+        if state then
+            notify("Cake Prince", "Tìm Cake Prince...", 4)
+            task.spawn(function()
+                local count = 0
+                while hopping.cake and count < MAX_HOPS_SLIDER do
+                    count += 1
+                    if hopLowPop() then
+                        if waitLoadAndCheck(hasCakePrince, "Cake Prince") then
+                            hopping.cake = false
+                            break
+                        end
+                    end
+                    task.wait(HOP_DELAY)
+                end
+                hopping.cake = false
+                notify("Cake Prince", "Dừng", 4)
+            end)
+        end
+    end)
+    Sea3Sec:NewToggle("DoughKingToggle", "Hop Katakuri V2 (Dough King)", function(state)
+        hopping.dough = state
+        if state then
+            notify("Dough King", "Tìm Dough King...", 4)
+            task.spawn(function()
+                local count = 0
+                while hopping.dough and count < MAX_HOPS_SLIDER do
+                    count += 1
+                    if hopLowPop() then
+                        if waitLoadAndCheck(hasDoughKing, "Dough King") then
+                            hopping.dough = false
+                            break
+                        end
+                    end
+                    task.wait(HOP_DELAY)
+                end
+                hopping.dough = false
+                notify("Dough King", "Dừng", 4)
+            end)
+        end
+    end)
+    Sea3Sec:NewToggle("LegendaryBerryToggle", "Hop Berry Huyền Thoại", function(state)
+        hopping.berry = state
+        if state then
+            notify("Berry Legendary", "Tìm Legendary Berry...", 4)
+            task.spawn(function()
+                local count = 0
+                while hopping.berry and count < MAX_HOPS_SLIDER do
+                    count += 1
+                    if hopLowPop() then
+                        if waitLoadAndCheck(hasLegendaryBerry, "Legendary Berry") then
+                            hopping.berry = false
+                            break
+                        end
+                    end
+                    task.wait(HOP_DELAY)
+                end
+                hopping.berry = false
+                notify("Berry Legendary", "Dừng", 4)
+            end)
+        end
+    end)
+else
+    Sea3Sec:NewLabel("⚠️ Vào Sea 3 để dùng Katakuri/Mirage/Berry!")
+end
+LowSec:NewButton("Random Hop", "Hop ngẫu nhiên", function()
+    notify("Random", "Random hop...", 2)
+    TS:Teleport(PID)
+end)
+LowSec:NewSlider("MaxHops", "Max hops mỗi lần (default 100)", 500, 10, function(v) MAX_HOPS_SLIDER = v end):Set(100)
+LowSec:NewSlider("HopDelay", "Delay giữa hops (s)", 10, 1, function(v) HOP_DELAY = v end):Set(2)
+notify("Hop Hub", "Loaded! Toggle để hop. Sea: " .. SEA_NAMES[CURRENT_SEA], 6)
+print("Hop Hub by Grok - Enjoy! 🚀")
