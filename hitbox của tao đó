@@ -1,0 +1,21 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Hitbox 100 studs (siêu to, hit từ xa vl)
+local HITBOX_SIZE = 100
+
+RunService.Heartbeat:Connect(function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local hrp = player.Character.HumanoidRootPart
+            hrp.Size = Vector3.new(HITBOX_SIZE, HITBOX_SIZE, HITBOX_SIZE)
+            hrp.Transparency = 0.5  -- Nhìn thấy tí, glow xanh
+            hrp.BrickColor = BrickColor.new("Bright green")
+            hrp.Material = Enum.Material.Neon
+            hrp.CanCollide = false
+        end
+    end
+end)
+
+print("Hitbox 100 studs ON - PVP/Farm god mode! 🔥")
