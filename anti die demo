@@ -1,0 +1,202 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Tạo ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SkyTPBloxFruits"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Main Frame chính
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 280, 0, 140)
+mainFrame.Position = UDim2.new(0.5, -140, 0.5, -70)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+-- UICorner cho mainFrame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 16)
+mainCorner.Parent = mainFrame
+
+-- UIStroke cho viền
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 4
+stroke.Color = Color3.fromRGB(255, 255, 255)
+stroke.Transparency = 0.3
+stroke.Parent = mainFrame
+
+-- UIGradient cho viền cầu vồng
+local gradient = Instance.new("UIGradient")
+gradient.Parent = stroke
+
+-- Màu cầu vồng
+local rainbowKeypoints = {
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),      -- Đỏ
+    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 127, 0)),   -- Cam
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),   -- Vàng
+    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)),     -- Xanh lá
+    ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 255, 255)),   -- Cyan
+    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(0, 0, 255)),     -- Xanh dương
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 255))    -- Tím
+}
+gradient.Color = ColorSequence.new(rainbowKeypoints)
+gradient.Rotation = 0
+
+-- Animate viền cầu vồng đổi màu liên tục
+local animStart = tick()
+RunService.Heartbeat:Connect(function()
+    gradient.Rotation = ((tick() - animStart) * 120) % 360
+end)
+
+-- Nút Teleport
+local tpButton = Instance.new("TextButton")
+tpButton.Name = "SkyTPButton"
+tpButton.Size = UDim2.new(0.88, 0, 0.78, 0)
+tpButton.Position = UDim2.new(0.06, 0, 0.11, 0)
+tpButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+tpButton.Text = "🚀 SKY TP 1500 STUD"
+tpButton.TextColor3 = Color3.new(1, 1, 1)
+tpButton.TextScaled = true
+tpButton.Font = Enum.Font.GothamBold
+tpButton.Parent = mainFrame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 12)
+btnCorner.Parent = tpButton
+
+-- Stroke cho nút
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Thickness = 2
+btnStroke.Color = Color3.new(1,1,1)
+btnStroke.Transparency = 0.5
+btnStroke.Parent = tpButton
+
+-- Hàm Teleport chống khống chế
+local function skyTeleport()
+    local character = player.Character
+    if character then
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        
+        if humanoidRootPart and humanoid then
+            -- Chống khống chế: Đổi state và set PlatformStand
+            humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+            humanoid.PlatformStand = true
+            
+            -- Teleport ngay lập tức +1500 Y
+            local currentCFrame = humanoidRootPart.CFrame
+            humanoidRootPart.CFrame = CFrame.new(currentCFrame.Position + Vector3.new(0, 1500, 0), currentCFrame.Position + currentCFrame.LookVector)
+            
+            -- Push velocity lên để chắc chắn không bị kéo xuống
+            humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
+            
+            -- Reset PlatformStand sau 0.5s để có thể di chuyển
+            task.wait(0.5)
+            if humanoid then
+                humanoid.PlatformStand = false
+            end
+        end
+    end
+end
+
+tpButton.MouseButton1Click:Connect(skyTeleport)
+
+-- Draggable (kéo di chuyển UI)
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+-- Resizable (kéo góc dưới phải để resize)
+local resizing = false
+local resizeStart = nil
+local startSize = nil
+local startPosResize = nil
+
+local resizeHandle = Instance.new("Frame")
+resizeHandle.Name = "ResizeHandle"
+resizeHandle.Size = UDim2.new(0.09, 0, 0.09, 0)
+resizeHandle.Position = UDim2.new(0.91, 0, 0.91, 0)
+resizeHandle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+resizeHandle.BackgroundTransparency = 0.3
+resizeHandle.Parent = mainFrame
+
+local handleCorner = Instance.new("UICorner")
+handleCorner.CornerRadius = UDim.new(1, 0)
+handleCorner.Parent = resizeHandle
+
+local handleStroke = Instance.new("UIStroke")
+handleStroke.Thickness = 1.5
+handleStroke.Color = Color3.new(1,1,1)
+handleStroke.Parent = resizeHandle
+
+local function updateResize(input)
+    local delta = input.Position - resizeStart
+    local newWidth = math.max(120, startSize.X.Offset + delta.X)
+    local newHeight = math.max(80, startSize.Y.Offset + delta.Y)
+    
+    -- Cập nhật size mới
+    mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+    
+    -- Giữ top-left fixed khi resize
+    mainFrame.Position = UDim2.new(
+        startPosResize.X.Scale,
+        startPosResize.X.Offset - (newWidth - startSize.X.Offset),
+        startPosResize.Y.Scale,
+        startPosResize.Y.Offset - (newHeight - startSize.Y.Offset)
+    )
+end
+
+resizeHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        resizing = true
+        resizeStart = input.Position
+        startSize = mainFrame.Size
+        startPosResize = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                resizing = false
+            end
+        end)
+    end
+end)
+
+-- Xử lý input cho drag và resize
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if dragging then
+            updateDrag(input)
+        elseif resizing then
+            updateResize(input)
+        end
+    end
+end)
+
+print("✅ Script Sky TP Blox Fruits đã load! Nhấn nút để bay lên trời 1500 stud.")
