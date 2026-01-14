@@ -109,40 +109,40 @@ end
 
 tpButton.MouseButton1Click:Connect(skyTeleport)
 
--- Draggable (kéo di chuyển UI)
-local dragging = false
-local dragStart = nil
-local startPos = nil
+-- Thêm nút Close (X) ở góc trên phải
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 25, 0, 25)
+closeButton.Position = UDim2.new(1, -30, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.new(1, 1, 1)
+closeButton.TextSize = 18
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = mainFrame
 
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeButton
 
-mainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
+closeButton.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
 end)
 
--- Resizable (kéo góc dưới phải để resize)
+-- Draggable (kéo di chuyển UI) - Sửa để mượt hơn, thêm MouseEnter/Leave
+mainFrame.Active = true
+mainFrame.Draggable = true  -- Sử dụng thuộc tính Draggable của Roblox để đơn giản và mượt
+
+-- Resizable (kéo góc dưới phải để resize) - Sửa để giữ position và scale nút
 local resizing = false
 local resizeStart = nil
 local startSize = nil
-local startPosResize = nil
+local startPos = nil
 
 local resizeHandle = Instance.new("Frame")
 resizeHandle.Name = "ResizeHandle"
-resizeHandle.Size = UDim2.new(0.09, 0, 0.09, 0)
-resizeHandle.Position = UDim2.new(0.91, 0, 0.91, 0)
+resizeHandle.Size = UDim2.new(0, 20, 0, 20)
+resizeHandle.Position = UDim2.new(1, -20, 1, -20)
 resizeHandle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 resizeHandle.BackgroundTransparency = 0.3
 resizeHandle.Parent = mainFrame
@@ -156,46 +156,50 @@ handleStroke.Thickness = 1.5
 handleStroke.Color = Color3.new(1,1,1)
 handleStroke.Parent = resizeHandle
 
-local function updateResize(input)
-    local delta = input.Position - resizeStart
-    local newWidth = math.max(120, startSize.X.Offset + delta.X)
-    local newHeight = math.max(80, startSize.Y.Offset + delta.Y)
-    
-    -- Cập nhật size mới
-    mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
-    
-    -- Giữ top-left fixed khi resize
-    mainFrame.Position = UDim2.new(
-        startPosResize.X.Scale,
-        startPosResize.X.Offset - (newWidth - startSize.X.Offset),
-        startPosResize.Y.Scale,
-        startPosResize.Y.Offset - (newHeight - startSize.Y.Offset)
-    )
-end
-
 resizeHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         resizing = true
         resizeStart = input.Position
         startSize = mainFrame.Size
-        startPosResize = mainFrame.Position
+        startPos = mainFrame.Position
         
-        input.Changed:Connect(function()
+        local connection
+        connection = input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 resizing = false
+                connection:Disconnect()
             end
         end)
     end
 end)
 
--- Xử lý input cho drag và resize
 UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        if dragging then
-            updateDrag(input)
-        elseif resizing then
-            updateResize(input)
-        end
+    if input.UserInputType == Enum.UserInputType.MouseMovement and resizing then
+        local delta = input.Position - resizeStart
+        local newSizeX = math.max(150, startSize.X.Offset + delta.X)
+        local newSizeY = math.max(100, startSize.Y.Offset + delta.Y)
+        
+        mainFrame.Size = UDim2.new(0, newSizeX, 0, newSizeY)
+        
+        -- Giữ top-left position fixed
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X / 2,  -- Adjust nhẹ để không lệch
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y / 2
+        )
+        
+        -- Scale nút teleport theo size mới (giữ tỷ lệ)
+        tpButton.Size = UDim2.new(0.88, 0, 0.78, 0)
+        tpButton.Position = UDim2.new(0.06, 0, 0.11, 0)
+        
+        -- Scale nút close theo
+        closeButton.Size = UDim2.new(0, math.min(25, newSizeX * 0.1), 0, math.min(25, newSizeY * 0.1))
+        closeButton.Position = UDim2.new(1, -closeButton.Size.X.Offset - 5, 0, 5)
+        
+        -- Scale resizeHandle
+        resizeHandle.Size = UDim2.new(0, math.min(20, newSizeX * 0.07), 0, math.min(20, newSizeY * 0.07))
+        resizeHandle.Position = UDim2.new(1, -resizeHandle.Size.X.Offset, 1, -resizeHandle.Size.Y.Offset)
     end
 end)
 
