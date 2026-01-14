@@ -79,7 +79,7 @@ btnStroke.Color = Color3.new(1,1,1)
 btnStroke.Transparency = 0.5
 btnStroke.Parent = tpButton
 
--- Hàm Teleport chống khống chế
+-- Hàm Teleport chống khống chế và chống kéo lại
 local function skyTeleport()
     local character = player.Character
     if character then
@@ -87,22 +87,32 @@ local function skyTeleport()
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         
         if humanoidRootPart and humanoid then
-            -- Chống khống chế: Đổi state và set PlatformStand
-            humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+            -- Chống khống chế: Đổi state, disable sit/stand
+            humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+            humanoid.Sit = false
             humanoid.PlatformStand = true
             
-            -- Teleport ngay lập tức +1500 Y
-            local currentCFrame = humanoidRootPart.CFrame
-            humanoidRootPart.CFrame = CFrame.new(currentCFrame.Position + Vector3.new(0, 1500, 0), currentCFrame.Position + currentCFrame.LookVector)
+            -- Tạo BodyPosition để force vị trí mới, chống kéo lại
+            local bodyPos = Instance.new("BodyPosition")
+            bodyPos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            bodyPos.Position = humanoidRootPart.Position + Vector3.new(0, 1500, 0)
+            bodyPos.Parent = humanoidRootPart
             
-            -- Push velocity lên để chắc chắn không bị kéo xuống
-            humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
+            -- Set velocity ban đầu
+            humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 500, 0)
             
-            -- Reset PlatformStand sau 0.5s để có thể di chuyển
-            task.wait(0.5)
-            if humanoid then
-                humanoid.PlatformStand = false
-            end
+            -- Tween để mượt mà và chống lag/pull back
+            local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear)
+            local tween = TweenService:Create(bodyPos, tweenInfo, {Position = bodyPos.Position})
+            tween:Play()
+            
+            -- Đợi tween hoàn thành rồi destroy BodyPosition
+            tween.Completed:Wait()
+            bodyPos:Destroy()
+            
+            -- Reset states
+            humanoid.PlatformStand = false
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
         end
     end
 end
@@ -129,15 +139,14 @@ closeButton.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- Draggable (kéo di chuyển UI) - Sửa để mượt hơn, thêm MouseEnter/Leave
+-- Draggable (kéo di chuyển UI) - Sử dụng thuộc tính Draggable của Roblox để đơn giản và mượt
 mainFrame.Active = true
-mainFrame.Draggable = true  -- Sử dụng thuộc tính Draggable của Roblox để đơn giản và mượt
+mainFrame.Draggable = true
 
--- Resizable (kéo góc dưới phải để resize) - Sửa để giữ position và scale nút
+-- Resizable (kéo góc dưới phải để resize) - Sửa để giữ top-left fixed, không điều chỉnh position
 local resizing = false
 local resizeStart = nil
 local startSize = nil
-local startPos = nil
 
 local resizeHandle = Instance.new("Frame")
 resizeHandle.Name = "ResizeHandle"
@@ -161,7 +170,6 @@ resizeHandle.InputBegan:Connect(function(input)
         resizing = true
         resizeStart = input.Position
         startSize = mainFrame.Size
-        startPos = mainFrame.Position
         
         local connection
         connection = input.Changed:Connect(function()
@@ -179,15 +187,8 @@ UserInputService.InputChanged:Connect(function(input)
         local newSizeX = math.max(150, startSize.X.Offset + delta.X)
         local newSizeY = math.max(100, startSize.Y.Offset + delta.Y)
         
+        -- Chỉ thay đổi size, giữ position top-left fixed (resize về phải và xuống)
         mainFrame.Size = UDim2.new(0, newSizeX, 0, newSizeY)
-        
-        -- Giữ top-left position fixed
-        mainFrame.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X / 2,  -- Adjust nhẹ để không lệch
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y / 2
-        )
         
         -- Scale nút teleport theo size mới (giữ tỷ lệ)
         tpButton.Size = UDim2.new(0.88, 0, 0.78, 0)
