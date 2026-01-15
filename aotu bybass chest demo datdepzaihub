@@ -1,0 +1,90 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local backpack = player:WaitForChild("Backpack")
+
+-- Hàm kiểm tra nếu có item đặc biệt (Fist of Darkness hoặc God's Chalice)
+local function hasSpecialItem()
+    for _, item in ipairs(backpack:GetChildren()) do
+        if item:IsA("Tool") and (item.Name == "Fist of Darkness" or item.Name == "God's Chalice") then
+            return true
+        end
+    end
+    -- Kiểm tra thêm trong character (nếu cầm)
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") and (item.Name == "Fist of Darkness" or item.Name == "God's Chalice") then
+            return true
+        end
+    end
+    return false
+end
+
+-- Hàm tìm tất cả rương spawn trong workspace
+local function findSpawnedChests()
+    local chests = {}
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") and string.find(obj.Name, "Chest") then  -- Chest1, Chest2, etc.
+            if obj:FindFirstChild("ProximityPrompt") or obj:FindFirstChildWhichIsA("TouchTransmitter") then
+                table.insert(chests, obj)
+            end
+        end
+    end
+    return chests
+end
+
+-- Hàm teleport bypass (sử dụng Tween để di chuyển mượt, tránh anti-cheat)
+local function safeTeleport(targetPos)
+    local tweenInfo = TweenInfo.new(
+        (humanoidRootPart.Position - targetPos).Magnitude / 300,  -- Tốc độ ~300 studs/s để ít lag và an toàn
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out
+    )
+    local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPos)})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Loop farm chính
+local farming = true
+while farming do
+    if hasSpecialItem() then
+        print("✅ Đã nhặt được item đặc biệt (Fist of Darkness hoặc God's Chalice), dừng farm tự động!")
+        farming = false
+        break
+    end
+    
+    local chests = findSpawnedChests()
+    if #chests > 0 then
+        for _, chest in ipairs(chests) do
+            if not farming then break end
+            if hasSpecialItem() then
+                farming = false
+                break
+            end
+            
+            local chestPos = chest.PrimaryPart.Position + Vector3.new(0, 5, 0)  -- TP lên trên rương một chút
+            safeTeleport(chestPos)
+            
+            -- Đợi load và nhặt (nếu chưa load, giữ vị trí)
+            local startTime = tick()
+            while chest.Parent and (tick() - startTime < 5) do  -- Đợi max 5s
+                humanoidRootPart.CFrame = CFrame.new(chestPos)  -- Giữ vị trí nếu chưa load
+                task.wait(0.1)
+            end
+            
+            -- Delay nhỏ giữa các rương để tránh kick
+            task.wait(1)
+        end
+    else
+        -- Không có rương, đợi check lại (delay để tránh loop nhanh kick)
+        print("🔍 Không tìm thấy rương spawn, đợi check lại...")
+        task.wait(10)  -- Đợi 10s check lại
+    end
+end
+
+print("❌ Farm đã dừng. Run script lại để tiếp tục.")
