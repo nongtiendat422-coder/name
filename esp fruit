@@ -1,0 +1,140 @@
+-- dathihihub - Simple Fruit ESP (No UI, Auto Active)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Cấu hình
+local ESP_COLOR = Color3.fromRGB(255, 215, 0)     -- Vàng
+local TEXT_SIZE = 14
+local MAX_DISTANCE = 100000                           -- Chỉ ESP trong khoảng cách này (studs)
+local SHOW_DISTANCE = true
+local SHOW_OWNER = true                             -- Hiển thị "Đang cầm bởi: Tên người"
+
+-- Danh sách tên trái cây (có thể thêm nếu muốn lọc)
+local FRUIT_NAMES = {
+    "Rocket", "Spin", "Chop", "Spring", "Bomb", "Smoke", "Spike",
+    "Flame", "Falcon", "Ice", "Sand", "Dark", "Diamond", "Light",
+    "Rubber", "Barrier", "Magma", "Quake", "Buddha", "Love", "Spider",
+    "Phoenix", "Portal", "Rumble", "Pain", "Blizzard", "Gravity",
+    "Dough", "Shadow", "Venom", "Control", "Spirit", "Dragon",
+    "Leopard", "Kitsune", "Sound"
+}
+
+-- Bảng lưu BillboardGui đã tạo
+local fruitESPs = {}
+
+local function isFruit(item)
+    if not item:IsA("Tool") then return false end
+    local name = item.Name
+    for _, fruit in ipairs(FRUIT_NAMES) do
+        if name:find(fruit) then
+            return true
+        end
+    end
+    return false
+end
+
+local function createESP(fruit)
+    if fruitESPs[fruit] then return end
+    
+    local bill = Instance.new("BillboardGui")
+    bill.Name = "FruitESP"
+    bill.Adornee = fruit
+    bill.Size = UDim2.new(0, 200, 0, 50)
+    bill.StudsOffset = Vector3.new(0, 3, 0)
+    bill.AlwaysOnTop = true
+    bill.LightInfluence = 0
+    bill.MaxDistance = MAX_DISTANCE
+    
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.TextColor3 = ESP_COLOR
+    text.TextStrokeTransparency = 0.4
+    text.TextStrokeColor3 = Color3.new(0,0,0)
+    text.Font = Enum.Font.SourceSansBold
+    text.TextSize = TEXT_SIZE
+    text.TextXAlignment = Enum.TextXAlignment.Center
+    text.Parent = bill
+    
+    bill.Parent = fruit
+    
+    fruitESPs[fruit] = {bill = bill, label = text}
+end
+
+local function updateESP()
+    for fruit, esp in pairs(fruitESPs) do
+        if not fruit or not fruit.Parent then
+            if esp.bill then esp.bill:Destroy() end
+            fruitESPs[fruit] = nil
+            continue
+        end
+        
+        local rootPart = fruit:FindFirstChild("Handle") or fruit:FindFirstChildWhichIsA("BasePart")
+        if not rootPart then continue end
+        
+        local distance = (rootPart.Position - Camera.CFrame.Position).Magnitude
+        if distance > MAX_DISTANCE then
+            esp.bill.Enabled = false
+            continue
+        end
+        
+        esp.bill.Enabled = true
+        
+        local displayName = fruit.Name
+        local extraInfo = ""
+        
+        -- Kiểm tra ai đang cầm
+        local character = fruit.Parent
+        if character and character:IsA("Model") and character:FindFirstChild("Humanoid") then
+            local player = Players:GetPlayerFromCharacter(character)
+            if player then
+                if SHOW_OWNER then
+                    extraInfo = "\nĐang cầm bởi: " .. player.Name
+                end
+                displayName = fruit.Name .. " (Cầm)"
+            end
+        end
+        
+        local distText = SHOW_DISTANCE and string.format("\n[%.0f studs]", distance) or ""
+        
+        esp.label.Text = displayName .. distText .. extraInfo
+    end
+end
+
+-- Tìm và ESP tất cả trái cây hiện có
+local function scanFruits()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if isFruit(obj) then
+            createESP(obj)
+        end
+    end
+end
+
+-- Khi có tool mới được thêm vào workspace
+workspace.ChildAdded:Connect(function(child)
+    task.spawn(function()
+        task.wait(0.5) -- chờ tool ổn định
+        if isFruit(child) then
+            createESP(child)
+        end
+    end)
+end)
+
+-- Quét định kỳ (để bắt fruit mới spawn hoặc fruit drop)
+task.spawn(function()
+    while true do
+        scanFruits()
+        task.wait(6) -- quét mỗi 6 giây
+    end
+end)
+
+-- Update mỗi frame
+RunService.RenderStepped:Connect(updateESP)
+
+-- Quét lần đầu ngay lập tức
+scanFruits()
+
+print("dathihihub Fruit ESP đã bật - Không UI, ESP tự động")
