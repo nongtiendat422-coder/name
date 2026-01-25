@@ -1,0 +1,162 @@
+-- Script Auto Hunt Devil Fruit Blox Fruits (300 Speed, Auto Hop Server)
+-- Kiểm tra liên tục fruit spawn → TP nhặt ngay (bypass ít lag)
+-- Không có fruit → Auto hop server mới & tiếp tục hunt
+-- Dừng: Thoát game (loop vô tận an toàn)
+-- Run 1 lần là auto mãi!
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local PLACE_ID = game.PlaceId
+
+-- Biến global
+local lastFruitCheck = 0
+local noFruitTimer = 0
+local MAX_NO_FRUIT_TIME = 45  -- Hop sau 45s không có fruit
+
+-- Handle Character respawn
+local function onCharacterAdded(char)
+    local humanoid = char:WaitForChild("Humanoid")
+    local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+    
+    -- Set speed 300
+    humanoid.WalkSpeed = 300
+    humanoid.JumpPower = 100
+    
+    print("✅ Speed 300 set! Hunting fruits...")
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+if player.Character then
+    onCharacterAdded(player.Character)
+end
+
+-- Hàm tìm tất cả Devil Fruit spawn (Tool trong Workspace)
+local function findDevilFruits()
+    local fruits = {}
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Tool") and obj:FindFirstChild("Handle") and not obj.Parent:IsA("Model") then  -- Fruit spawn là Tool loose
+            table.insert(fruits, obj)
+        end
+    end
+    return fruits
+end
+
+-- Hàm TP bypass (Tween mượt ~300 studs/s, an toàn anti-cheat)
+local function safeTP(targetCFrame)
+    local character = player.Character
+    if not character then return end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
+    local distance = (rootPart.Position - targetCFrame.Position).Magnitude
+    local tweenInfo = TweenInfo.new(math.max(0.5, distance / 350), Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Hàm nhặt fruit
+local function collectFruit(fruit)
+    local handle = fruit:FindFirstChild("Handle")
+    if handle then
+        -- TP sát fruit
+        safeTP(handle.CFrame * CFrame.new(0, 5, -3))
+        
+        -- Fire ProximityPrompt nếu có, hoặc force CFrame nhặt
+        local prompt = handle:FindFirstChildOfClass("ProximityPrompt")
+        if prompt then
+            fireproximityprompt(prompt)
+        else
+            -- Backup: Spam CFrame vào handle
+            for i = 1, 10 do
+                rootPart.CFrame = handle.CFrame * CFrame.new(0, 0, -2)
+                task.wait(0.1)
+            end
+        end
+        
+        print("✅ Đã nhặt fruit: " .. fruit.Name)
+        return true
+    end
+    return false
+end
+
+-- Hàm hop server (từ script trước, an toàn)
+local function hopServer()
+    print("🌐 Không có fruit, hop server mới...")
+    
+    local servers = {}
+    local cursor = nil
+    
+    repeat
+        local success, response = pcall(HttpService.GetAsync, HttpService, 
+            "https://games.roblox.com/v1/games/" .. PLACE_ID .. "/servers/Public?sortOrder=Asc&limit=100" .. (cursor and "&cursor=" .. cursor or ""))
+        
+        if success then
+            local data = HttpService:JSONDecode(response)
+            for _, v in ipairs(data.data) do
+                if v.playing < v.maxPlayers and v.playing > 0 then
+                    table.insert(servers, v.id)
+                end
+            end
+            cursor = data.nextPageCursor
+        else
+            task.wait(5)
+            return hopServer()
+        end
+    until not cursor or #servers >= 10
+    
+    if #servers == 0 then
+        task.wait(10)
+        return hopServer()
+    end
+    
+    local randomServer = servers[math.random(1, #servers)]
+    TeleportService:TeleportToPlaceInstance(PLACE_ID, randomServer, player)
+end
+
+-- Loop hunt chính (chạy vô tận)
+spawn(function()
+    while true do
+        local now = tick()
+        
+        -- Check fruit mỗi 1s
+        if now - lastFruitCheck >= 1 then
+            lastFruitCheck = now
+            local fruits = findDevilFruits()
+            
+            if #fruits > 0 then
+                noFruitTimer = 0  -- Reset timer
+                print("🔍 Tìm thấy " .. #fruits .. " fruit(s)! TP nhặt...")
+                
+                -- Nhặt gần nhất trước
+                table.sort(fruits, function(a, b)
+                    local distA = (player.Character.HumanoidRootPart.Position - a.Handle.Position).Magnitude
+                    local distB = (player.Character.HumanoidRootPart.Position - b.Handle.Position).Magnitude
+                    return distA < distB
+                end)
+                
+                for _, fruit in ipairs(fruits) do
+                    if collectFruit(fruit) then
+                        task.wait(2)  -- Delay sau nhặt
+                    end
+                end
+            else
+                noFruitTimer = noFruitTimer + 1
+                if noFruitTimer >= MAX_NO_FRUIT_TIME then
+                    hopServer()  -- Hop & script tự restart ở server mới
+                    break  -- Thoát loop hiện tại, Teleport sẽ reload
+                end
+            end
+        end
+        
+        task.wait(0.1)  -- Loop mượt, ít lag
+    end
+end)
+
+print("🚀 Auto Hunt Devil Fruit đã bật! Speed 300 | Auto Hop | Thoát game để dừng.")
