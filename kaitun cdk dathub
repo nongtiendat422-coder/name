@@ -1,0 +1,118 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
+local backpack = player:WaitForChild("Backpack")
+
+local CommF_ = ReplicatedStorage.Remotes.CommF_
+
+humanoid.WalkSpeed = 300
+humanoid.JumpPower = 100
+
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:WaitForChild("Humanoid")
+    humanoid.WalkSpeed = 300
+    humanoid.JumpPower = 100
+end)
+
+local EliteHunterCFrame = CFrame.new(-5461.53564, 314.475708, -2668.16821)
+local spawnCFrames = {
+    ["Castle on the Sea"] = CFrame.new(-5460.53564, 316.475708, -2665.16821),
+    ["Hydra Island"] = CFrame.new(5446.87, 29.54, 392.11),
+    ["Floating Turtle"] = CFrame.new(-1344.67, 199.42, 3863.59),
+    ["Port Town"] = CFrame.new(-2906, 445, 5404),
+    ["Great Tree"] = CFrame.new(2248, 24, 115)
+}
+
+local function safeTP(targetCFrame)
+    local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
+    local time = math.max(0.8, distance / 350)
+    local tween = TweenService:Create(humanoidRootPart, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+local function fastAttack(target)
+    if not target or not target.Parent then return end
+    local startTime = tick()
+    while target.Parent and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 and tick() - startTime < 30 do
+        humanoidRootPart.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(math.random(-10,10)/10, 10, math.random(-10,10)/10)
+        CommF_:FireServer("Melee")
+        task.wait(0.05)
+    end
+end
+
+local function findElitePirate()
+    for _, obj in pairs(workspace.Enemies:GetChildren()) do
+        if obj.Name == "Elite Pirate" or string.find(obj.Name, "Elite Pirate") then
+            return obj
+        end
+    end
+    return nil
+end
+
+local function hasCDK()
+    return backpack:FindFirstChild("Cursed Dual Katana") ~= nil or character:FindFirstChild("Cursed Dual Katana") ~= nil
+end
+
+spawn(function()
+    while true do
+        if hasCDK() then
+            break
+        end
+        
+        safeTP(EliteHunterCFrame * CFrame.new(0, 5, 0))
+        task.wait(1)
+        local eliteHunter = workspace.NPCs:FindFirstChild("EliteHunter")
+        if eliteHunter and eliteHunter:FindFirstChildOfClass("ProximityPrompt") then
+            fireproximityprompt(eliteHunter.ProximityPrompt)
+        end
+        task.wait(3)
+        
+        local questData = CommF_:InvokeServer("EliteHunter")
+        local killed = questData.killed or 0
+        
+        local noEliteTimer = 0
+        while killed < 8 do
+            local elite = findElitePirate()
+            if elite then
+                safeTP(elite.HumanoidRootPart.CFrame)
+                fastAttack(elite)
+                task.wait(2)
+                noEliteTimer = 0
+            else
+                noEliteTimer = noEliteTimer + 1
+                if noEliteTimer >= 30 then
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))().serverhop()
+                    break
+                end
+                task.wait(2)
+            end
+            
+            questData = CommF_:InvokeServer("EliteHunter")
+            killed = questData.killed or 0
+        end
+        
+        task.wait(5)
+    end
+end)
+
+player.Chatted:Connect(function(msg)
+    msg = msg:lower()
+    if msg == "!tp yama" then
+        safeTP(CFrame.new(5239.33, 601.4, 90))
+    elseif msg == "!tp longma" then
+        safeTP(CFrame.new(2895, 148, -15606))
+    elseif msg == "!tp crypt" then
+        safeTP(CFrame.new(-1238, 41, -239))
+    elseif msg == "!tp elite" then
+        safeTP(EliteHunterCFrame)
+    end
+end)
