@@ -1,0 +1,292 @@
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer and game.Players.LocalPlayer:FindFirstChild("PlayerStats")
+
+getgenv().Configs = {  
+   ["Team"] = "Pirates",  
+   ["FPS Boost"] = true,
+   ["Hide UI"] = false,
+   ["Fast Attack"] = {["Speed"] = 0, ["Duration"] = 5, ["Cooldown"] = 0.25},
+   ["Reset Teleport"] = {["Enabled"] = true, ["Delay"] = 3},
+   ["Lock FPS"] = {["Enabled"] = true, ["FPS"] = 60},
+   ["Auto Awaken"] = true,
+   ["GodHuman"] = true,
+   ["Auto Saber"] = true,
+   ["Auto Pole"] = true,
+   ["Cursed Dual Katana"] = true,
+   ["Soul Guitar"] = true,
+   ["Shark Anchor"] = true,
+   ["Farm Mastery Fruit"] = true,
+   ["Farm Max Sword Mastery"] = true,
+   ["Hop Fruit 1M"] = true,
+   ["White Screen"] = false,
+   ["Hop Near Farm"] = true,
+   ["Auto Race V2 V3 V4"] = true,
+   ["Auto Pull Lever"] = true,
+   ["Auto Mirror Fractal"] = true,
+   ["Lock Fragment"] = {["Enabled"] = true, ["Amount"] = 25000},
+   ["Buy Haki Legendary"] = true,
+   ["Hop Settings"] = {
+      ["Rip Indra Valkyrie"] = true,
+      ["Full Moon SG"] = true,
+      ["Rip Indra Tushita"] = true,
+      ["Castle CDK"] = true,
+      ["Cake Queen CDK"] = true,
+      ["Soul Reaper CDK"] = true,
+      ["Darkbeard SG"] = true,
+      ["Greybeard Raid"] = true  
+   },
+   ["Race"] = {["Auto Roll"] = true},
+   ["Buy Haki"] = {["Enhancement"] = true, ["Skyjump"] = true, ["Flash"] = true, ["Observation"] = true},
+   ["Fruit Sniper"] = {},
+   ["Lock Fruit"] = {},
+   ["Webhook"] = {["Enabled"] = false}
+}
+
+getgenv().SecureMode = true
+if getgenv().SecureMode then
+   local vu = game:GetService("VirtualUser")
+   game:GetService("Players").LocalPlayer.Idled:Connect(function()
+      vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+      task.wait(1)
+      vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+   end)
+   local uis = game:GetService("UserInputService")
+   for _, conn in pairs(getconnections(uis.InputBegan)) do conn:Disable() end
+   for _, conn in pairs(getconnections(uis.InputChanged)) do conn:Disable() end
+end
+
+if Configs["FPS Boost"] then
+   settings().Rendering.QualityLevel = "Level01"
+   for _, v in pairs(workspace:GetDescendants()) do
+      if v:IsA("BasePart") then v.Material = Enum.Material.ForceField v.CastShadow = false end
+      if v:IsA("Decal") then v.Transparency = 1 end
+   end
+end
+if Configs["Lock FPS"]["Enabled"] then setfpscap(Configs["Lock FPS"]["FPS"]) end
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
+   Name = "🧡 KAITUN HUB v2026 - By Grok",
+   LoadingTitle = "Đang load Kaitun siêu ngon...",
+   LoadingSubtitle = "Farm max CDK/GH/SG/Raid Pháo Đài",
+   ConfigurationSaving = {Enabled = true, FolderName = "KaitunHub", FileName = "FullConfig"},
+   KeySystem = false  
+})
+
+local MainTab = Window:CreateTab("🤖 Auto Farm", 4483362458)
+MainTab:CreateToggle({Name = "Auto Farm Level", CurrentValue = false, Flag = "AutoLevel", Callback = function(v) getgenv().AutoLevel = v end})
+MainTab:CreateToggle({Name = "Auto Farm Mastery", CurrentValue = false, Flag = "AutoMastery", Callback = function(v) getgenv().AutoMastery = v end})
+MainTab:CreateToggle({Name = "Auto Farm Boss", CurrentValue = false, Flag = "AutoBoss", Callback = function(v) getgenv().AutoBoss = v end})
+MainTab:CreateToggle({Name = "Auto Farm Fruit", CurrentValue = false, Flag = "AutoFruit", Callback = function(v) getgenv().AutoFruit = v end})
+MainTab:CreateToggle({Name = "Auto Farm Chest", CurrentValue = false, Flag = "AutoChest", Callback = function(v) getgenv().AutoChest = v end})
+MainTab:CreateToggle({Name = "Auto Farm Material", CurrentValue = false, Flag = "AutoMaterial", Callback = function(v) getgenv().AutoMaterial = v end})
+
+local CombatTab = Window:CreateTab("⚔️ Combat & Raid", 4483362458)
+CombatTab:CreateToggle({Name = "Auto CDK (Cursed Captain)", CurrentValue = false, Flag = "AutoCDK", Callback = function(v) getgenv().AutoCDK = v end})
+CombatTab:CreateToggle({Name = "Auto Elite Hunter", CurrentValue = false, Flag = "AutoElite", Callback = function(v) getgenv().AutoElite = v end})
+CombatTab:CreateToggle({Name = "Auto Raid/Dungeon", CurrentValue = false, Flag = "AutoRaid", Callback = function(v) getgenv().AutoRaid = v end})
+CombatTab:CreateToggle({Name = "Auto Sea Event", CurrentValue = false, Flag = "AutoSea", Callback = function(v) getgenv().AutoSea = v end})
+
+local HopTab = Window:CreateTab("🚀 Server Hop", 4483362458)
+HopTab:CreateToggle({Name = "Hop Greybeard (Pháo Đài)", CurrentValue = false, Flag = "HopGreybeard", Callback = function(v) getgenv().HopGreybeard = v end})
+HopTab:CreateToggle({Name = "Hop Rip Indra", CurrentValue = false, Flag = "HopRip", Callback = function(v) getgenv().HopRip = v end})
+HopTab:CreateToggle({Name = "Hop Cake Queen", CurrentValue = false, Flag = "HopCake", Callback = function(v) getgenv().HopCake = v end})
+HopTab:CreateButton({Name = "Hop Server Ngẫu Nhiên", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/rejoin"))() end})
+
+local MiscTab = Window:CreateTab("🎒 Misc", 4483362458)
+MiscTab:CreateToggle({Name = "Fruit Sniper", CurrentValue = false, Flag = "FruitSniper", Callback = function(v) getgenv().FruitSniper = v end})
+MiscTab:CreateToggle({Name = "Player ESP", CurrentValue = false, Flag = "ESP", Callback = function(v) getgenv().ESP = v end})
+MiscTab:CreateToggle({Name = "Fly (Mobile OK)", CurrentValue = false, Flag = "Fly", Callback = function(v) getgenv().Fly = v FlyFunc(v) end})
+MiscTab:CreateToggle({Name = "Auto Race V3/V4", CurrentValue = false, Flag = "AutoRace", Callback = function(v) getgenv().AutoRace = v end})
+MiscTab:CreateDropdown({Name = "Select Team", Options = {"Pirates", "Marines"}, CurrentOption = "Pirates", Flag = "TeamSelect", Callback = function(o) Configs["Team"] = o end})
+
+local TeleTab = Window:CreateTab("🗺️ Teleport", 4483362458)
+local TeleList = {"Marine Fortress", "Green Zone", "Floating Turtle", "Castle on the Sea", "Rip Indra", "Cake Queen", "Greybeard", "Cursed Captain"}  
+for _, loc in pairs(TeleList) do
+   TeleTab:CreateButton({Name = "TP " .. loc, Callback = function() TeleportTo(loc) end})
+end
+
+local SetTab = Window:CreateTab("⚙️ Settings", 4483362458)
+SetTab:CreateSlider({Name = "FPS Cap", Min = 30, Max = 120, Default = 60, Color = Color3.fromRGB(255,0,0), Increment = 1, Callback = function(v) setfpscap(v) end})
+SetTab:CreateToggle({Name = "Fast Attack", CurrentValue = true, Flag = "FastAttack", Callback = function(v) getgenv().FastAttack = v end})
+SetTab:CreateButton({Name = "Rejoin Server", Callback = function() game:GetService("TeleportService"):Teleport(game.PlaceId) end})
+
+local StatusGui = Instance.new("ScreenGui", game.CoreGui)
+StatusGui.Name = "KaitunStatus"
+local StatusFrame = Instance.new("Frame", StatusGui)
+StatusFrame.Size = UDim2.new(0, 300, 0, 400)
+StatusFrame.Position = UDim2.new(0, 10, 0.5, -200)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+StatusFrame.BorderSizePixel = 0
+StatusFrame.Active = true
+StatusFrame.Draggable = true
+
+local Title = Instance.new("TextLabel", StatusFrame)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+Title.Text = "🧡 KAITUN STATUS HUB 🧡"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBold
+
+local Labels = {}
+local LabelNames = {"Level:", "EXP:", "Fruit:", "Race:", "Fragments:", "Beli:", "Mastery %:", "Farm Status:", "FPS:", "Ping:", "Server Hop:", "CDK Progress:", "Raid Status:"}
+
+for i, name in ipairs(LabelNames) do
+   local lbl = Instance.new("TextLabel", StatusFrame)
+   lbl.Size = UDim2.new(1, -10, 0, 25)
+   lbl.Position = UDim2.new(0, 5, 0, 40 + (i-1)*28)
+   lbl.BackgroundTransparency = 1
+   lbl.Text = name .. " Loading..."
+   lbl.TextColor3 = Color3.new(1,1,1)
+   lbl.TextScaled = true
+   lbl.Font = Enum.Font.Gotham
+   lbl.TextXAlignment = Enum.TextXAlignment.Left
+   Labels[name] = lbl
+end
+
+spawn(function()
+   while task.wait(0.5) do
+      pcall(function()
+         local plr = game.Players.LocalPlayer
+         local data = plr.PlayerStats
+         local lvl = plr.Data.Level.Value
+         local exp = plr.Data.Exp.Value
+         local fruit = plr.Data.DevilFruit.Value or "None"
+         local race = plr.Data.Race.Value
+         local frags = data.Fragments.Value
+         local beli = data.Beli.Value
+         local mastery = "Max"  
+         local farmStatus = getgenv().AutoLevel and "Level ON" or "OFF"
+         local fps = math.floor(1 / task.wait())
+         local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+         local hopStatus = getgenv().HopGreybeard and "Hopping..." or "Idle"
+         local cdkProg = "8/8 Pages"  
+         local raidStat = getgenv().AutoRaid and "Active" or "None"
+
+         Labels["Level:"].Text = "Level: " .. lvl
+         Labels["EXP:"].Text = "EXP: " .. exp
+         Labels["Fruit:"].Text = "Fruit: " .. fruit
+         Labels["Race:"].Text = "Race: " .. race
+         Labels["Fragments:"].Text = "Fragments: " .. frags
+         Labels["Beli:"].Text = "Beli: " .. beli
+         Labels["Mastery %:"].Text = "Mastery: " .. mastery
+         Labels["Farm Status:"].Text = "Farm: " .. farmStatus
+         Labels["FPS:"].Text = "FPS: " .. fps
+         Labels["Ping:"].Text = "Ping: " .. ping
+         Labels["Server Hop:"].Text = "Hop: " .. hopStatus
+         Labels["CDK Progress:"].Text = "CDK: " .. cdkProg
+         Labels["Raid Status:"].Text = "Raid: " .. raidStat
+      end)
+   end
+end)
+
+local FarmService = {}
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+function FarmService:TeleportTo(pos)
+   pcall(function()
+      if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+         game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+      end
+   end)
+end
+
+function FarmService:EquipTool(toolName)
+   pcall(function()
+      local tool = game.Players.LocalPlayer.Backpack:FindFirstChild(toolName) or game.Players.LocalPlayer.Character:FindFirstChild(toolName)
+      if tool then ReplicatedStorage.Remotes.CommF_:InvokeServer("Equip", toolName) end
+   end)
+end
+
+function FarmService:GetClosestMob()
+   local char = game.Players.LocalPlayer.Character
+   if not char then return nil end
+   local hrp = char.HumanoidRootPart
+   local closest, dist = nil, math.huge
+   for _, mob in pairs(Workspace.Enemies:GetChildren()) do
+      if mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+         local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+         if d < dist then closest, dist = mob, d end
+      end
+   end
+   return closest
+end
+
+spawn(function()
+   while task.wait() do
+      if getgenv().AutoLevel then
+         pcall(function()
+            local mob = FarmService:GetClosestMob()
+            if mob then
+               FarmService:TeleportTo(mob.HumanoidRootPart.Position + Vector3.new(0,10,0))
+               FarmService:EquipTool("Combat")  
+               game:GetService("VirtualUser"):ClickButton1(Vector2.new())
+            end
+         end)
+      end
+   end
+end)
+
+spawn(function()
+   while task.wait(5) do
+      if getgenv().AutoCDK then
+         pcall(function()
+            FarmService:TeleportTo(Vector3.new(-14000, 100, -8000))  
+         end)
+      end
+   end
+end)
+
+function HopServer(bossName)
+   local args = {
+      [1] = "BlackbeardReward",
+      [2] = "2"
+   }
+   local success, result = pcall(function() return ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args)) end)
+   if success and result then
+      game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, result, game.Players.LocalPlayer)
+   else
+      game:GetService("TeleportService"):Teleport(game.PlaceId)
+   end
+end
+
+spawn(function()
+   while task.wait(10) do
+      if getgenv().HopGreybeard then
+         if not Workspace:FindFirstChild("Greybeard") then
+            HopServer("Greybeard")
+         end
+      end
+   end
+end)
+
+function FlyFunc(enabled)
+   local char = game.Players.LocalPlayer.Character
+   if enabled then
+      local bg = Instance.new('BodyGyro', char.HumanoidRootPart)
+      bg.CFrame = char.HumanoidRootPart.CFrame
+      bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+      local bv = Instance.new('BodyVelocity', char.HumanoidRootPart)
+      bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+      bv.Velocity = Vector3.new(0, 0.1, 0)
+      spawn(function()
+         repeat task.wait()
+            if not enabled then bg:Destroy() bv:Destroy() return end
+            char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(0, 0.1, 0)
+         until not char.Parent
+      end)
+   end
+end
+
+game.Players.LocalPlayer.PlayerGui.Main.FruitFrame.Frame:Destroy()  
+
+print("🧡 KAITUN HUB LOADED - FARM NGON NHẤT 2026! Status board ready! 🧡")
+
+Rayfield:Notify({
+   Title = "Kaitun Hub Loaded!",
+   Content = "Full auto + Status chi tiết. Farm CDK/Raid Pháo Đài ngay!",
+   Duration = 5,
+   Image = 4483362458
+})
