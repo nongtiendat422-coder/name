@@ -1,0 +1,186 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GrokTradeScamFinal"
+ScreenGui.Parent = playerGui
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame")
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Position = UDim2.new(0.5, -160, 0.5, -130)
+Frame.Size = UDim2.new(0, 320, 0, 240)
+Frame.Active = true
+Frame.Draggable = true
+
+local Title = Instance.new("TextLabel")
+Title.Parent = Frame
+Title.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+Title.BorderSizePixel = 0
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "GROK TRADE SCAM FINAL 2026"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+
+local FreezeBtn = Instance.new("TextButton")
+FreezeBtn.Parent = Frame
+FreezeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+FreezeBtn.BorderSizePixel = 0
+FreezeBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
+FreezeBtn.Size = UDim2.new(0.45, 0, 0, 40)
+FreezeBtn.Font = Enum.Font.Gotham
+FreezeBtn.Text = "FREEZE TRADE (E)"
+FreezeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FreezeBtn.TextSize = 14
+
+local UnfreezeBtn = Instance.new("TextButton")
+UnfreezeBtn.Parent = Frame
+UnfreezeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+UnfreezeBtn.BorderSizePixel = 0
+UnfreezeBtn.Position = UDim2.new(0.5, 0, 0.2, 0)
+UnfreezeBtn.Size = UDim2.new(0.45, 0, 0, 40)
+UnfreezeBtn.Font = Enum.Font.Gotham
+UnfreezeBtn.Text = "UNFREEZE (Q)"
+UnfreezeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+UnfreezeBtn.TextSize = 14
+
+local AutoAcceptToggle = Instance.new("TextButton")
+AutoAcceptToggle.Parent = Frame
+AutoAcceptToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AutoAcceptToggle.BorderSizePixel = 0
+AutoAcceptToggle.Position = UDim2.new(0.05, 0, 0.42, 0)
+AutoAcceptToggle.Size = UDim2.new(0.9, 0, 0, 40)
+AutoAcceptToggle.Font = Enum.Font.Gotham
+AutoAcceptToggle.Text = "AUTO ACCEPT: OFF"
+AutoAcceptToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoAcceptToggle.TextSize = 14
+
+local SpamToggle = Instance.new("TextButton")
+SpamToggle.Parent = Frame
+SpamToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SpamToggle.BorderSizePixel = 0
+SpamToggle.Position = UDim2.new(0.05, 0, 0.6, 0)
+SpamToggle.Size = UDim2.new(0.9, 0, 0, 40)
+SpamToggle.Font = Enum.Font.Gotham
+SpamToggle.Text = "SPAM ADD VISUAL: OFF"
+SpamToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpamToggle.TextSize = 14
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Parent = Frame
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Position = UDim2.new(0.05, 0, 0.78, 0)
+CloseBtn.Size = UDim2.new(0.9, 0, 0, 40)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Text = "CLOSE GUI (INSERT)"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 14
+
+local frozen = false
+local autoAccept = false
+local spamVisual = false
+local declineBtn = nil
+local acceptBtn = nil
+local addBtn = nil
+
+local function findButton(parent, keywords)
+    for _, obj in pairs(parent:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            local nameLower = obj.Name:lower()
+            for _, kw in pairs(keywords) do
+                if nameLower:find(kw) then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function setupTrade(gui)
+    declineBtn = findButton(gui, {"decline", "cancel", "no"})
+    acceptBtn = findButton(gui, {"accept", "yes", "confirm", "trade"})
+    addBtn = findButton(gui, {"add", "plus", "insert"})
+end
+
+playerGui.ChildAdded:Connect(function(child)
+    if child.Name:lower():find("trade") or child.Name:lower():find("container") then
+        wait(0.8)
+        setupTrade(child)
+    end
+end)
+
+FreezeBtn.MouseButton1Click:Connect(function()
+    if declineBtn and acceptBtn then
+        frozen = true
+        declineBtn.Active = false
+        declineBtn.Visible = false
+        acceptBtn.Active = false
+        acceptBtn.Visible = false
+    end
+end)
+
+UnfreezeBtn.MouseButton1Click:Connect(function()
+    if declineBtn and acceptBtn then
+        frozen = false
+        declineBtn.Active = true
+        declineBtn.Visible = true
+        acceptBtn.Active = true
+        acceptBtn.Visible = true
+    end
+end)
+
+AutoAcceptToggle.MouseButton1Click:Connect(function()
+    autoAccept = not autoAccept
+    AutoAcceptToggle.Text = "AUTO ACCEPT: " .. (autoAccept and "ON" or "OFF")
+    AutoAcceptToggle.BackgroundColor3 = autoAccept and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+SpamToggle.MouseButton1Click:Connect(function()
+    spamVisual = not spamVisual
+    SpamToggle.Text = "SPAM ADD VISUAL: " .. (spamVisual and "ON" or "OFF")
+    SpamToggle.BackgroundColor3 = spamVisual and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    Frame.Visible = not Frame.Visible
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.E then
+        FreezeBtn.MouseButton1Click:Fire()
+    elseif input.KeyCode == Enum.KeyCode.Q then
+        UnfreezeBtn.MouseButton1Click:Fire()
+    elseif input.KeyCode == Enum.KeyCode.Insert then
+        Frame.Visible = not Frame.Visible
+    end
+end)
+
+spawn(function()
+    while wait(0.15) do
+        if autoAccept and acceptBtn then
+            pcall(function()
+                acceptBtn.MouseButton1Click:Fire()
+            end)
+        end
+    end
+end)
+
+spawn(function()
+    while wait(0.08) do
+        if spamVisual and addBtn then
+            pcall(function()
+                addBtn.MouseButton1Click:Fire()
+            end)
+        end
+    end
+end)
+
+Frame.Visible = true
