@@ -1,0 +1,86 @@
+-- Blade Ball ULTRA Script
+-- Auto Parry + Spam + Velocity Prediction + Turbo
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local parry = remotes:WaitForChild("Parry")
+
+local Settings = {
+    AutoParry = true,
+    AutoSpam = true,
+    Turbo = false,
+    Distance = 26,
+    Speed = 0.01
+}
+
+-- GUI
+local gui = Instance.new("ScreenGui", game.CoreGui)
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,160)
+frame.Position = UDim2.new(0,20,0,200)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+local function makeButton(text,y,callback)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1,0,0.33,0)
+    btn.Position = UDim2.new(0,0,y,0)
+    btn.Text = text
+    
+    btn.MouseButton1Click:Connect(callback)
+end
+
+makeButton("Auto Parry: ON",0,function(btn)
+    Settings.AutoParry = not Settings.AutoParry
+end)
+
+makeButton("Auto Spam: ON",0.33,function(btn)
+    Settings.AutoSpam = not Settings.AutoSpam
+end)
+
+makeButton("Turbo Mode",0.66,function(btn)
+    Settings.Turbo = true
+    Settings.Speed = 0.003
+    Settings.Distance = 30
+end)
+
+-- tìm bóng
+local function getBall()
+    for _,v in pairs(workspace:GetChildren()) do
+        if v.Name == "Ball" then
+            return v
+        end
+    end
+end
+
+while true do
+    task.wait(Settings.Speed)
+
+    if not Settings.AutoParry then continue end
+
+    local char = player.Character
+    if not char then continue end
+
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then continue end
+
+    local ball = getBall()
+
+    if ball then
+        local dist = (ball.Position - root.Position).Magnitude
+        local vel = ball.AssemblyLinearVelocity.Magnitude
+
+        if dist <= Settings.Distance or vel > 90 then
+            parry:FireServer()
+
+            if Settings.AutoSpam then
+                parry:FireServer()
+                parry:FireServer()
+                parry:FireServer()
+            end
+        end
+    end
+end
