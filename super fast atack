@@ -1,0 +1,19 @@
+-- Super Fast Attack 0.3-0.35 / hit
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+
+_G.SuperFastAttack = true
+_G.AttackSpeed = 0.30 -- chỉnh 0.3 - 0.35
+
+spawn(function()
+    while _G.SuperFastAttack do
+        pcall(function()
+            local tool = Character:FindFirstChildOfClass("Tool")
+            if tool then
+                tool:Activate()
+            end
+        end)
+        task.wait(_G.AttackSpeed)
+    end
+end)
