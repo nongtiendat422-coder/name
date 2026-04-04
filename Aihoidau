@@ -1,0 +1,84 @@
+local p=game.Players.LocalPlayer
+local rs=game.ReplicatedStorage
+local Net=rs.Modules.Net
+local RH,RA=Net["RE/RegisterHit"],Net["RE/RegisterAttack"]
+
+local SendHit
+pcall(function()
+    SendHit=getsenv(p.PlayerScripts:WaitForChildOfClass("LocalScript"))._G.SendHitsToServer
+end)
+
+local R=999
+local Parts={"Head","HumanoidRootPart","LeftHand","RightHand","LeftLowerArm","RightLowerArm"}
+
+local function ngu(v)
+    local h=v:FindFirstChild("Humanoid")
+    local r=v:FindFirstChild("HumanoidRootPart")
+    return h and r and h.Health>0
+end
+
+local function trieu()
+    local t,c={},p.Character
+    if not c then return t end
+    local hrp=c.HumanoidRootPart
+    
+    for _,v in pairs(workspace.Enemies:GetChildren()) do
+        if ngu(v) and (v.HumanoidRootPart.Position-hrp.Position).Magnitude<=R then
+            t[#t+1]=v
+        end
+    end
+    for _,v in pairs(workspace.Characters:GetChildren()) do
+        if v~=c and ngu(v) and (v.HumanoidRootPart.Position-hrp.Position).Magnitude<=R then
+            t[#t+1]=v
+        end
+    end
+    return t
+end
+
+local function hh(v)
+    return v:FindFirstChild(Parts[math.random(#Parts)]) or v.HumanoidRootPart
+end
+
+task.spawn(function()
+    while task.wait() do
+        local c=p.Character
+        if not c then continue end
+        
+        local tg=trieu()
+        if #tg==0 then continue end
+        
+        local a={nil,{}}
+        for _,v in pairs(tg) do
+            local pr=hh(v)
+            a[1]=a[1] or pr
+            a[2][#a[2]+1]={v,pr}
+        end
+        
+        RA:FireServer(0)
+        if SendHit then SendHit(unpack(a)) else RH:FireServer(unpack(a)) end
+    end
+end)
+local S=3
+
+local function scale(c)
+	for _,v in pairs(c:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.Size=v.Size*S
+		elseif v:IsA("SpecialMesh") or v:IsA("Mesh") then
+			v.Scale=v.Scale*S
+		end
+	end
+end
+
+local function apply()
+	local c=workspace.Characters:WaitForChild(p.Name)
+	scale(c)
+end
+
+apply()
+
+p.CharacterAdded:Connect(function()
+	task.wait(1)
+	apply()
+end)
+-- trieu
